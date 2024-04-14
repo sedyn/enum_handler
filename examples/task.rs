@@ -19,24 +19,25 @@ struct Context {
 }
 
 enum_handler! {
-    TaskMessage,
-    (Executor, Arc<Context>),
-    Print,
-    Exit,
+    enum TaskMessage {
+        Print,
+        Exit,
+    },
+    (Executor, Arc<Context>)
 }
 
 trait Handler<M> {
-    fn execute(&mut self, msg: M, context: Arc<Context>);
+    fn handle(&mut self, msg: M, context: Arc<Context>);
 }
 
 impl Handler<Print> for Executor {
-    fn execute(&mut self, msg: Print, _: Arc<Context>) {
+    fn handle(&mut self, msg: Print, _: Arc<Context>) {
         println!("{}", msg.message);
     }
 }
 
 impl Handler<Exit> for Executor {
-    fn execute(&mut self, _: Exit, context: Arc<Context>) {
+    fn handle(&mut self, _: Exit, context: Arc<Context>) {
         println!("exit message received");
         context.shutdown_signal.send(()).unwrap();
     }
@@ -52,7 +53,7 @@ fn main() {
 
     thread::spawn(move || loop {
         let task = rx.recv().unwrap();
-        task.execute(&mut executor, Arc::clone(&context));
+        task.handle(&mut executor, Arc::clone(&context));
     });
 
     tx.send(TaskMessage::from(Print {
